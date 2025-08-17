@@ -1,33 +1,487 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Noted.</title>
-  <link rel="stylesheet" href="style.css">
-  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;700&display=swap" rel="stylesheet">
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@300;400;700&family=Playfair+Display:wght@400;600;800&family=Space+Grotesk:wght@300;400;700&family=Poppins:wght@300;400;700&family=Pacifico&family=Lora:wght@400;600;700&family=Merriweather:wght@400;700&family=Indie+Flower&family=Barlow:wght@600;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --ink: #e5e7eb;
+      --muted: #9ca3af;
+      --accent: #60a5fa;
+      --ring: rgba(96,165,250,.4);
+      --border: #1f2937;
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font-family: Inter, system-ui; min-height:100vh; }
+
+    header {
+      position: sticky; top: 0; z-index: 10;
+      backdrop-filter: blur(8px);
+      background: color-mix(in srgb, var(--panel) 80%, transparent);
+      border-bottom: 1px solid var(--border);
+    }
+    .wrap { max-width: 1000px; margin: 0 auto; padding: 12px 16px; }
+    .row { display: flex; align-items: center; gap: 10px; }
+    .spacer { flex: 1; }
+    .brand { font-family: Barlow, Inter, system-ui; font-weight: 800; font-size: 22px; cursor: pointer; user-select: none; }
+
+    .btn, select, input[type=text], input[type=number] {
+      background:#0b1220; color:var(--ink);
+      border:1px solid #243041; border-radius:10px; padding:8px 10px;
+      outline:none; font:inherit;
+    }
+    .btn { cursor:pointer; }
+    .btn.primary { background: linear-gradient(180deg, #2563eb, #1d4ed8); border-color:#1e40af; }
+    .btn.ghost { background: transparent; }
+    .btn.warn { background: linear-gradient(180deg, #ef4444, #b91c1c); border-color:#7f1d1d; }
+    .btn.round { border-radius: 999px; padding: 8px 12px; }
+    .btn:focus, select:focus, input:focus { box-shadow: 0 0 0 4px var(--ring); border-color: var(--accent); }
+
+    main { max-width: 1000px; margin: 16px auto 40px; padding: 0 16px; }
+    .panel { background: color-mix(in srgb, var(--panel) 85%, transparent); border:1px solid var(--border); border-radius:18px; padding:16px; }
+
+    /* HOME */
+    #home .toolbar { display:flex; gap:10px; align-items:center; margin-bottom:12px; flex-wrap:wrap; }
+    #notesList { display:grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap:12px; }
+    .card { border:1px solid var(--border); background:#0b1220; padding:12px; border-radius:14px; cursor:pointer; transition: transform .1s ease; }
+    .card:hover { transform: translateY(-2px); }
+    .card h3 { margin:0 0 6px; font-size:16px; font-weight:700; }
+    .meta { color:var(--muted); font-size:12px; margin-top:6px; }
+    .tag { display:inline-block; padding:4px 8px; border-radius:6px; margin:6px 6px 0 0; font-size:12px; cursor:pointer; border:1px solid transparent; }
+    #tagFilterBar { display:flex; gap:8px; flex-wrap:wrap; }
+    .pill { padding:4px 10px; border:1px solid var(--border); border-radius:999px; cursor:pointer; background:#0b1220; }
+    .pill.active { outline: 2px solid var(--accent); }
+
+    /* EDITOR */
+    #editorView .toolbar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:12px; }
+    #titleInput { width: min(420px, 100%); }
+    #note { min-height: 55vh; outline:none; font-size:18px; white-space: pre-wrap; word-wrap: break-word; }
+    #status { color:var(--muted); font-size:12px; margin-left:auto; }
+    #selectedTags { display:flex; flex-wrap:wrap; gap:6px; margin:6px 0 0; }
+    .chip { display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border-radius:999px; font-size:12px; border:1px solid transparent; }
+    .chip button { background:transparent; border:none; color:var(--muted); cursor:pointer; }
+    #tagInputWrap { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+    #tagInput { min-width: 160px; }
+    datalist option { color:#000; }
+
+    /* Focus Mode */
+    body.fullscreen header { display:none; }
+    body.fullscreen main { max-width:none; padding:0; margin:0; }
+    #editorView.full { position:fixed; inset:0; border-radius:0; border:none; background:var(--bg); }
+    #editorView.full .toolbar { display:none; }
+    #editorView.full #note { min-height:100vh; padding: 24px 18px 80px; font-size: clamp(18px, 2.2vw, 22px); max-width: 900px; margin: 0 auto; }
+    #exitFocus { position: fixed; right: 18px; bottom: 18px; z-index: 40; display:none; }
+    body.fullscreen #exitFocus { display:inline-block; }
+
+    /* Tag visibility helpers */
+    .tag, .chip { transition: background-color .15s ease, outline-color .15s ease; }
+  </style>
 </head>
 <body>
   <header>
-    <h1>Noted.</h1>
-    <button id="homeBtn">Home</button>
-  </header>
-  <main id="homeView">
-    <div id="tagFilters"></div>
-    <button id="newNoteBtn">+ New Note</button>
-    <div id="notesList"></div>
-  </main>
-  <section id="editorView" class="hidden">
-    <div class="editor-controls">
-      <select id="fontSelect"></select>
-      <div id="tagContainer"></div>
-      <input type="text" id="newTagInput" placeholder="Add new tag">
-      <input type="color" id="tagColorInput" value="#3498db">
-      <button id="addTagBtn">Add Tag</button>
-      <button id="focusBtn">Focus Mode</button>
+    <div class="wrap">
+      <div class="row">
+        <div class="brand" id="brandBtn">Noted.</div>
+        <div class="spacer"></div>
+        <button class="btn" id="homeBtn" title="Home">Home</button>
+      </div>
     </div>
-    <textarea id="noteInput" placeholder="Start writing..."></textarea>
-  </section>
-  <script src="script.js"></script>
+  </header>
+
+  <main>
+    <!-- HOME VIEW -->
+    <section id="home" class="panel" hidden>
+      <div class="toolbar">
+        <input id="searchInput" type="text" placeholder="Search titles & content" />
+        <div id="tagFilterBar"></div>
+        <div class="row" style="gap:8px; align-items:center;">
+          <label>Match</label>
+          <button id="matchModeBtn" class="btn ghost" title="Toggle Any/All">Any tag</button>
+        </div>
+        <button id="newBtn" class="btn primary">+ New Entry</button>
+        <div class="spacer"></div>
+        <span id="countMeta" class="meta"></span>
+      </div>
+      <div id="notesList"></div>
+    </section>
+
+    <!-- EDITOR VIEW -->
+    <section id="editorView" class="panel" hidden>
+      <div class="toolbar" id="editorToolbar">
+        <button id="focusBtn" class="btn round" title="Focus mode">⤢ Focus</button>
+        <button id="backBtn" class="btn">← Back</button>
+        <input id="titleInput" type="text" placeholder="Title" />
+        <div id="tagInputWrap">
+          <label for="tagInput">Tags</label>
+          <input id="tagInput" list="tagOptions" type="text" placeholder="Type and press Enter" />
+          <datalist id="tagOptions"></datalist>
+          <input id="tagColor" type="color" title="Pick tag color" value="#60a5fa" />
+          <button id="saveTagColorBtn" class="btn ghost" title="Save color for tag">Save color</button>
+        </div>
+        <label>
+          Font
+          <select id="fontSelect" title="Choose font">
+            <option value="Inter, system-ui">Inter (Clean)</option>
+            <option value="Poppins, system-ui">Poppins (Modern)</option>
+            <option value="Playfair Display, serif">Playfair</option>
+            <option value="JetBrains Mono, monospace">JetBrains Mono</option>
+            <option value="Space Grotesk, system-ui">Space Grotesk</option>
+            <option value="Pacifico, cursive">Pacifico</option>
+            <option value="Lora, serif">Lora</option>
+            <option value="Merriweather, serif">Merriweather</option>
+            <option value="Indie Flower, cursive">Indie Flower</option>
+          </select>
+        </label>
+        <label>
+          Add Font URL
+          <input id="newFontUrl" type="text" placeholder="Google Font CSS URL" />
+          <button id="addFontBtn" class="btn ghost">Add</button>
+        </label>
+        <label>
+          Size
+          <input id="sizeInput" type="number" min="12" max="48" step="1" value="18" style="width:80px" />
+        </label>
+        <button id="deleteBtn" class="btn warn">Delete</button>
+        <button id="saveBtn" class="btn primary">Save</button>
+        <div id="status"></div>
+      </div>
+
+      <div id="selectedTags"></div>
+      <div id="note" contenteditable="true" spellcheck="true"></div>
+      <button id="exitFocus" class="btn round">⤡ Exit Focus (Esc)</button>
+    </section>
+  </main>
+
+  <script>
+  // ===== Storage Schema (v6) =====
+  // store = {
+  //   notes: [{id, title, html, tags[], font, size, updatedAt}],
+  //   fonts: [{url, family}],
+  //   tagPool: ["work","ideas",...],
+  //   tagMeta: { [tag]: { color: "#RRGGBB" } },
+  //   matchMode: 'any'|'all'
+  // }
+  const LS_KEY = 'noted:v6';
+  const uid = () => Math.random().toString(36).slice(2, 9);
+
+  const els = {
+    home: document.getElementById('home'),
+    editor: document.getElementById('editorView'),
+    notesList: document.getElementById('notesList'),
+    search: document.getElementById('searchInput'),
+    tagFilterBar: document.getElementById('tagFilterBar'),
+    matchModeBtn: document.getElementById('matchModeBtn'),
+    newBtn: document.getElementById('newBtn'),
+    countMeta: document.getElementById('countMeta'),
+    backBtn: document.getElementById('backBtn'),
+    homeBtn: document.getElementById('homeBtn'),
+    brandBtn: document.getElementById('brandBtn'),
+    title: document.getElementById('titleInput'),
+    tagInput: document.getElementById('tagInput'),
+    tagOptions: document.getElementById('tagOptions'),
+    tagColor: document.getElementById('tagColor'),
+    saveTagColorBtn: document.getElementById('saveTagColorBtn'),
+    selectedTags: document.getElementById('selectedTags'),
+    note: document.getElementById('note'),
+    fontSelect: document.getElementById('fontSelect'),
+    newFontUrl: document.getElementById('newFontUrl'),
+    addFontBtn: document.getElementById('addFontBtn'),
+    size: document.getElementById('sizeInput'),
+    save: document.getElementById('saveBtn'),
+    delete: document.getElementById('deleteBtn'),
+    status: document.getElementById('status'),
+    editorToolbar: document.getElementById('editorToolbar'),
+    focusBtn: document.getElementById('focusBtn'),
+    exitFocus: document.getElementById('exitFocus'),
+  };
+
+  let store = loadStore();
+  let currentId = null;
+  let focusMode = false;
+  let activeFilterTags = new Set();
+
+  function loadStore(){
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (!raw) return migrateOld({ notes: [], fonts: [], tagPool: [], tagMeta: {}, matchMode: 'any' });
+      const data = JSON.parse(raw);
+      if (!data.notes) data.notes = [];
+      if (!data.fonts) data.fonts = [];
+      if (!data.tagPool) data.tagPool = [];
+      if (!data.tagMeta) data.tagMeta = {};
+      if (!data.matchMode) data.matchMode = 'any';
+      data.fonts.forEach(f => mountFont(f.url));
+      return data;
+    } catch(e){
+      return migrateOld({ notes: [], fonts: [], tagPool: [], tagMeta: {}, matchMode: 'any' });
+    }
+  }
+
+  // Migrate older localStorage keys forward
+  function migrateOld(def){
+    try{
+      const old = JSON.parse(localStorage.getItem('noted:v5')||'null') ||
+                  JSON.parse(localStorage.getItem('noted:v4')||'null') ||
+                  JSON.parse(localStorage.getItem('noted:v3')||'null') ||
+                  JSON.parse(localStorage.getItem('noted:v2')||'null');
+      if(old && Array.isArray(old.notes)){
+        const tagPool = Array.from(new Set((old.tagPool||[]).concat(old.notes.flatMap(n=> (n.tags||[])))));
+        const res = { notes: old.notes, fonts: old.fonts||[], tagPool, tagMeta: old.tagMeta||{}, matchMode: old.matchMode || 'any' };
+        localStorage.setItem(LS_KEY, JSON.stringify(res));
+        return res;
+      }
+    }catch(e){}
+    return def;
+  }
+
+  function saveStore(){ localStorage.setItem(LS_KEY, JSON.stringify(store)); }
+  function mountFont(url){ const link = document.createElement('link'); link.rel = 'stylesheet'; link.href = url; document.head.appendChild(link); }
+
+  // ===== Routing =====
+  function showHome(){ els.home.hidden = false; els.editor.hidden = true; currentId = null; buildFilterBar(); renderList(); }
+  function showEditor(id){ els.home.hidden = true; els.editor.hidden = false; openNote(id); }
+
+  // ===== Home (filter bar) =====
+  function buildFilterBar(){
+    els.tagFilterBar.innerHTML = '';
+    store.tagPool.sort((a,b)=>a.localeCompare(b)).forEach(tag=>{
+      const p = document.createElement('button');
+      p.className = 'pill'; p.textContent = tag; p.dataset.tag = tag;
+      styleTagElt(p, tag);
+      if(activeFilterTags.has(tag)) p.classList.add('active');
+      p.addEventListener('click', ()=>{ toggleFilterTag(tag); });
+      els.tagFilterBar.appendChild(p);
+    });
+    els.matchModeBtn.textContent = store.matchMode === 'any' ? 'Any tag' : 'All tags';
+  }
+
+  function toggleFilterTag(tag){
+    if(activeFilterTags.has(tag)) activeFilterTags.delete(tag);
+    else activeFilterTags.add(tag);
+    buildFilterBar(); renderList();
+  }
+
+  els.matchModeBtn.addEventListener('click', ()=>{
+    store.matchMode = store.matchMode==='any' ? 'all' : 'any';
+    saveStore(); buildFilterBar(); renderList();
+  });
+
+  function renderList(){
+    const q = (els.search.value || '').toLowerCase();
+    const filterTags = Array.from(activeFilterTags);
+    let notes = [...store.notes].sort((a,b)=> (b.updatedAt||0) - (a.updatedAt||0));
+
+    if (q){
+      notes = notes.filter(n =>
+        (n.title||'').toLowerCase().includes(q) ||
+        (stripHtml(n.html||'').toLowerCase().includes(q))
+      );
+    }
+
+    if (filterTags.length){
+      notes = notes.filter(n => {
+        const inNote = new Set((n.tags||[]).map(t=>String(t).toLowerCase()));
+        if(store.matchMode==='all') return filterTags.every(t=> inNote.has(t.toLowerCase()));
+        return filterTags.some(t=> inNote.has(t.toLowerCase()));
+      });
+    }
+
+    els.countMeta.textContent = notes.length ? `${notes.length} note${notes.length>1?'s':''}` : 'No notes yet';
+    els.notesList.innerHTML = '';
+
+    notes.forEach(n => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <h3>${escapeHtml(n.title || 'Untitled')}</h3>
+        <div class="snippet">${escapeHtml(stripHtml(n.html || '').slice(0,120))}${n.html && stripHtml(n.html).length>120?'…':''}</div>
+        <div class="meta">${formatDate(n.updatedAt)}</div>
+        <div class="tags">${(n.tags||[]).map(t=>`<span class="tag" data-tag="${escapeHtml(t)}">${escapeHtml(t)}</span>`).join('')}</div>
+      `;
+      card.addEventListener('click', ()=> showEditor(n.id));
+      card.querySelectorAll('.tag').forEach(tagEl=>{
+        const tag = tagEl.dataset.tag;
+        styleTagElt(tagEl, tag);
+        tagEl.addEventListener('click', (e)=>{ e.stopPropagation(); toggleFilterTag(tag); });
+      });
+      els.notesList.appendChild(card);
+    });
+  }
+
+  function stripHtml(s){ const div=document.createElement('div'); div.innerHTML=s; return div.textContent || ''; }
+  function escapeHtml(s){ return s.replace(/[&<>"]/g, c=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+  function formatDate(ts){ if(!ts) return ''; const d=new Date(ts); return d.toLocaleString(); }
+
+  // ===== Tags in Editor (chips + autocomplete) =====
+  function refreshTagOptions(){
+    els.tagOptions.innerHTML = '';
+    store.tagPool.sort((a,b)=>a.localeCompare(b)).forEach(t=>{
+      const opt = document.createElement('option'); opt.value = t; els.tagOptions.appendChild(opt);
+    });
+  }
+
+  function addTagToCurrent(tag){
+    if(!currentId) return;
+    tag = tag.trim(); if(!tag) return;
+    const n = store.notes.find(x=>x.id===currentId); if(!n) return;
+    if(!n.tags) n.tags = [];
+    if(!n.tags.includes(tag)) n.tags.push(tag);
+    if(!store.tagPool.includes(tag)) store.tagPool.push(tag);
+    renderSelectedChips(n.tags);
+    refreshTagOptions();
+    immediateSave();
+  }
+
+  function removeTagFromCurrent(tag){
+    const n = store.notes.find(x=>x.id===currentId); if(!n) return;
+    n.tags = (n.tags||[]).filter(t=>t!==tag);
+    renderSelectedChips(n.tags);
+    immediateSave();
+  }
+
+  function renderSelectedChips(tags){
+    els.selectedTags.innerHTML = '';
+    (tags||[]).forEach(t=>{
+      const chip = document.createElement('span'); chip.className = 'chip';
+      styleTagElt(chip, t);
+      const label = document.createElement('span'); label.textContent = t; label.style.cursor='pointer';
+      label.addEventListener('click', ()=>{ els.tagInput.value = t; els.tagColor.value = getTagColor(t); els.tagInput.focus(); });
+      const x = document.createElement('button'); x.setAttribute('aria-label','Remove'); x.textContent = '×';
+      x.addEventListener('click', ()=> removeTagFromCurrent(t));
+      chip.appendChild(label); chip.appendChild(x);
+      els.selectedTags.appendChild(chip);
+    });
+  }
+
+  // Add tag via Enter/comma
+  els.tagInput.addEventListener('keydown', (e)=>{
+    if(e.key==='Enter' || e.key===','){
+      e.preventDefault();
+      const tag = els.tagInput.value.replace(',', '').trim();
+      if(tag){ addTagToCurrent(tag); els.tagColor.value = getTagColor(tag); }
+      els.tagInput.value='';
+    }
+  });
+
+  // Save a tag's color
+  els.saveTagColorBtn.addEventListener('click', ()=>{
+    const tag = (els.tagInput.value || '').trim();
+    if(!tag){ alert('Type a tag name to set its color.'); return; }
+    setTagColor(tag, els.tagColor.value);
+    const n = store.notes.find(x=>x.id===currentId);
+    if(n && (n.tags||[]).includes(tag)) renderSelectedChips(n.tags);
+    buildFilterBar(); renderList(); saveStore();
+  });
+
+  // ===== Tag color system =====
+  function hashString(str){ let h=0; for(let i=0;i<str.length;i++){ h = Math.imul(31,h) + str.charCodeAt(i) | 0; } return Math.abs(h); }
+  function defaultColorFor(tag){
+    const palette = ['#60a5fa','#34d399','#f59e0b','#f472b6','#a78bfa','#f87171','#22d3ee','#facc15'];
+    return palette[hashString(tag)%palette.length];
+  }
+  function getTagColor(tag){ return (store.tagMeta && store.tagMeta[tag] && store.tagMeta[tag].color) || defaultColorFor(tag); }
+  function setTagColor(tag, hex){ if(!store.tagMeta) store.tagMeta = {}; store.tagMeta[tag] = { color: hex }; saveStore(); }
+  function hexToRgb(hex){
+    const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+    if(!m) return [96,165,250];
+    return [parseInt(m[1],16),parseInt(m[2],16),parseInt(m[3],16)];
+  }
+  function styleTagElt(el, tag){
+    const c = getTagColor(tag);
+    const rgb = hexToRgb(c);
+    el.style.borderColor = c;
+    el.style.color = c;
+    el.style.background = 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',0.16)';
+  }
+
+  // ===== Editor =====
+  function openNote(id){
+    const n = store.notes.find(x=>x.id===id) || createNote();
+    currentId = n.id;
+    els.title.value = n.title || '';
+    els.note.innerHTML = n.html || '';
+    els.fontSelect.value = n.font || 'Inter, system-ui';
+    els.size.value = n.size || 18;
+    refreshTagOptions();
+    renderSelectedChips(n.tags||[]);
+    applyFont(); applySize();
+    updateStatus('Ready');
+  }
+
+  function createNote(){
+    const n = { id: uid(), title: 'Untitled', html: '<p>Start writing…</p>', tags: [], font: 'Inter, system-ui', size: 18, updatedAt: Date.now() };
+    store.notes.unshift(n); saveStore(); return n;
+  }
+
+  function saveCurrent(){
+    if(!currentId) return;
+    const n = store.notes.find(x=>x.id===currentId); if(!n) return;
+    n.title = els.title.value.trim() || 'Untitled';
+    n.html = els.note.innerHTML;
+    n.font = els.fontSelect.value;
+    n.size = Math.min(48, Math.max(12, Number(els.size.value)||18));
+    n.updatedAt = Date.now();
+    updateStatus('Saved');
+    saveStore();
+  }
+
+  function deleteCurrent(){
+    if(!currentId) return;
+    const n = store.notes.find(x=>x.id===currentId); if(!n) return;
+    if(confirm('Delete this note?')){ store.notes = store.notes.filter(x=>x.id!==currentId); saveStore(); showHome(); }
+  }
+
+  function applyFont(){ els.note.style.fontFamily = els.fontSelect.value; }
+  function applySize(){ els.note.style.fontSize = Math.min(48, Math.max(12, Number(els.size.value)||18)) + 'px'; }
+  function updateStatus(txt){ els.status.textContent = txt; }
+
+  // Add custom Google Font at runtime
+  els.addFontBtn.addEventListener('click', ()=>{
+    const url = (els.newFontUrl.value||'').trim(); if(!url) return;
+    mountFont(url);
+    const family = prompt('Enter font-family name as used in CSS (e.g., "Roboto, sans-serif")');
+    if(family){
+      store.fonts.push({url, family}); saveStore();
+      const opt = document.createElement('option'); opt.value = family; opt.textContent = family;
+      els.fontSelect.appendChild(opt); els.fontSelect.value = family; applyFont(); saveCurrent();
+    }
+  });
+
+  // ===== Focus Mode =====
+  function enterFocus(){ focusMode = true; document.body.classList.add('fullscreen'); els.editor.classList.add('full'); }
+  function exitFocus(){ focusMode = false; document.body.classList.remove('fullscreen'); els.editor.classList.remove('full'); }
+  els.focusBtn.addEventListener('click', ()=>{ focusMode ? exitFocus() : enterFocus(); });
+  els.exitFocus.addEventListener('click', exitFocus);
+  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && focusMode){ exitFocus(); }});
+
+  // ===== Nav & events =====
+  els.newBtn.addEventListener('click', ()=>{ const n=createNote(); showEditor(n.id); });
+  els.backBtn.addEventListener('click', showHome);
+  els.homeBtn.addEventListener('click', showHome);
+  els.brandBtn.addEventListener('click', showHome);
+  els.search.addEventListener('input', renderList);
+  els.save.addEventListener('click', saveCurrent);
+  els.delete.addEventListener('click', deleteCurrent);
+
+  // Autosave each keystroke
+  function immediateSave(){ updateStatus('Saving…'); saveCurrent(); }
+  els.title.addEventListener('input', immediateSave);
+  els.note.addEventListener('input', immediateSave);
+  els.fontSelect.addEventListener('change', ()=>{ applyFont(); immediateSave(); });
+  els.size.addEventListener('input', ()=>{ applySize(); immediateSave(); });
+
+  // Boot
+  showHome();
+  if(store.notes.length===0){
+    const n=createNote(); // keep user on Home first-run; note is created so they can open & start writing
+  }
+  </script>
 </body>
 </html>
