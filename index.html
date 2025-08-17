@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Noted.</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header>
+    <h1>Noted.</h1>
+    <button id="homeBtn">Home</button>
+  </header>
+  <main id="homeView">
+    <div id="tagFilters"></div>
+    <button id="newNoteBtn">+ New Note</button>
+    <div id="notesList"></div>
+  </main>
+  <section id="editorView" class="hidden">
+    <div class="editor-controls">
+      <select id="fontSelect"></select>
+      <div id="tagContainer"></div>
+      <input type="text" id="newTagInput" placeholder="Add new tag">
+      <input type="color" id="tagColorInput" value="#3498db">
+      <button id="addTagBtn">Add Tag</button>
+      <button id="focusBtn">Focus Mode</button>
+    </div>
+    <textarea id="noteInput" placeholder="Start writing..."></textarea>
+  </section>
+  <script src="script.js"></script>
+</body>
+</html>
